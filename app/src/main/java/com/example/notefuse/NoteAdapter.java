@@ -34,26 +34,21 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
     public void onBindViewHolder(@NonNull VH holder, int position) {
         Note n = list.get(position);
         holder.title.setText(n.getTitle().isEmpty() ? "(No Title)" : n.getTitle());
-        long expiry = n.getExpiryAt();
-        if(expiry > 0){
-            long diff = expiry - System.currentTimeMillis();
+
+        if(n.getExpiryAt() > 0){
+            long diff = n.getExpiryAt() - System.currentTimeMillis();
             if(diff <= 0){
-                // already expired - remove locally and from DB
-                db.deleteNoteById(n.getId());
-                cancelAlarm(n.getId());
-                list.remove(position);
-                notifyItemRemoved(position);
-                return;
+                holder.content.setText("Expired...");
             } else {
                 long mins = TimeUnit.MILLISECONDS.toMinutes(diff);
-                holder.content.setText(n.getContent() + " — self destructs in " + mins + " min");
+                long secs = TimeUnit.MILLISECONDS.toSeconds(diff) % 60;
+                holder.content.setText(n.getContent() + " — self destructs in " + mins + "m " + secs + "s");
             }
         } else {
             holder.content.setText(n.getContent());
         }
 
         holder.itemView.setOnLongClickListener(v -> {
-            // manual delete (optional)
             db.deleteNoteById(n.getId());
             cancelAlarm(n.getId());
             list.remove(position);
@@ -61,6 +56,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
             return true;
         });
     }
+
 
     private void cancelAlarm(long noteId){
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
@@ -72,6 +68,19 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.VH> {
 
     @Override
     public int getItemCount() { return list.size(); }
+
+    public void removeExpiredNotes() {
+        for (int i = list.size() - 1; i >= 0; i--) { // iterate backwards
+            Note n = list.get(i);
+            if (n.getExpiryAt() > 0 && n.getExpiryAt() <= System.currentTimeMillis()) {
+                db.deleteNoteById(n.getId());
+                cancelAlarm(n.getId());
+                list.remove(i);
+                notifyItemRemoved(i);
+            }
+        }
+    }
+
 
     static class VH extends RecyclerView.ViewHolder {
         TextView title, content;
