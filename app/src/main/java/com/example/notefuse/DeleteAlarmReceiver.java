@@ -10,12 +10,12 @@ import android.os.Build;
 import androidx.core.app.NotificationCompat;
 
 public class DeleteAlarmReceiver extends BroadcastReceiver {
-    public static final String EXTRA_NOTE_ID = "note_id";
+
     private static final String CHANNEL_ID = "notefuse_channel";
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        long noteId = intent.getLongExtra(EXTRA_NOTE_ID, -1);
+        long noteId = intent.getLongExtra("note_id", -1);
         if(noteId == -1) return;
 
         DBHelper db = new DBHelper(context);
@@ -36,16 +36,17 @@ public class DeleteAlarmReceiver extends BroadcastReceiver {
                 .setPriority(NotificationCompat.PRIORITY_HIGH);
 
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-        nm.notify((int)noteId, nb.build());
+        if(nm != null) nm.notify((int)noteId, nb.build());
     }
 
     private void createNotificationChannel(Context ctx) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "NoteFuse Alerts";
-            String desc = "Notifications for destroyed notes";
-            int importance = NotificationManager.IMPORTANCE_HIGH;
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
-            channel.setDescription(desc);
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "NoteFuse Alerts",
+                    NotificationManager.IMPORTANCE_HIGH
+            );
+            channel.setDescription("Notifications for destroyed notes");
             NotificationManager nm = ctx.getSystemService(NotificationManager.class);
             if (nm != null) nm.createNotificationChannel(channel);
         }
